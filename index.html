@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.red-box {
+  width: 50px;
+  height: 50px;
+  background-color: red;
+  position: absolute;
+}
+
+.blue-box {
+  width: 50px;
+  height: 50px;
+  background-color: blue;
+  position: absolute;
+}
+
+.yellow-circle {
+  width: 50px;
+  height: 50px;
+  background-color: yellow;
+  border-radius: 25px; /* make it a circle */
+  position: absolute;
+}
+
+/* shield indicator */
+.shield {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 60px;
+  height: 60px;
+  border-radius: 30px;
+  border: 2px solid yellow;
+  display: none;
+}
+
+.purple-star{
+  width: 50px;
+  height: 50px;
+  background-color: purple;
+  border-radius: 25px; /* make it a star */
+  position: absolute;
+}
+</style>
+</head>
+<body>
+<img id="death-indicator" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/U%2B216C.svg/1200px-U%2B216C.svg.png" alt="Death Indicator" style="display: none;">
+<div id="red-box" class="red-box">
+  <div class="shield"></div>
+</div>
+<div id="score"></div>
+
+<script>
+var redBox = document.getElementById("red-box");
+var shieldIndicator = document.querySelector(".shield");
+var score = document.getElementById("score");
+var currentScore = 0;
+var bestScore = localStorage.getItem("bestScore") || 0;
+var shield = false; /* to check if shield is active */
+
+document.onmousemove = function(event) {
+redBox.style.left = event.clientX + "px";
+redBox.style.top = event.clientY + "px";
+}
+
+var blueInterval = setInterval(createBlueBox, 1000);
+var yellowInterval = setInterval(createYellowCircle, 10000);
+var scoreInterval = setInterval(updateScore, 100); /* update score faster */
+var collisionInterval = setInterval(detectCollision, 100); /* check for collision faster */
+var purpleInterval = setInterval(createPurpleStar, 30000); /* create purple stars */
+
+function createBlueBox() {
+var blueBox = document.createElement("div");
+blueBox.classList.add("blue-box");
+blueBox.style.left = Math.random() * window.innerWidth + "px";
+blueBox.style.top = Math.random() * window.innerHeight + "px";
+document.body.appendChild(blueBox);
+
+setTimeout(function() {
+blueBox.remove();
+}, 2000);
+}
+
+function createYellowCircle(){
+var yellowCircle = document.createElement("div");
+yellowCircle.classList.add("yellow-circle");
+yellowCircle.style.left = Math.random() * window.innerWidth + "px";
+yellowCircle.style.top = Math.random() * window.innerHeight + "px";
+document.body.appendChild(yellowCircle);
+
+setTimeout(function() {
+yellowCircle.remove();
+}, 6000);
+}
+
+function createPurpleStar(){
+    var purpleStar = document.createElement("div");
+    purpleStar.classList.add("purple-star");
+    purpleStar.style.left = Math.random() * window.innerWidth + "px";
+    purpleStar.style.top = Math.random() * window.innerHeight + "px";
+    document.body.appendChild(purpleStar);
+
+    setTimeout(function() {
+        purpleStar.remove();
+    }, 10000);
+}
+
+function updateScore(){
+currentScore++;
+score.innerHTML = "Score: " + currentScore;
+if (currentScore % 10 == 0) {
+clearInterval(blueInterval);
+blueInterval = setInterval(createBlueBox, 1000 - currentScore);
+}
+}
+
+function detectCollision(){
+var blueBoxes = document.querySelectorAll(".blue-box");
+var yellowCircles = document.querySelectorAll(".yellow-circle");
+var purpleStars = document.querySelectorAll(".purple-star");
+for(var i = 0; i < blueBoxes.length; i++){
+    if(isCollision(redBox, blueBoxes[i]) && !shield){
+      reset();
+    }
+    else if(currentScore > 10){
+      moveTowardsPlayer(blueBoxes[i]);
+    }
+}
+for(var i = 0; i < yellowCircles.length; i++){
+    if(isCollision(redBox, yellowCircles[i])){
+        shield = true;
+        shieldIndicator.style.display = "block";
+        yellowCircles[i].remove();
+        setTimeout(function() {
+            shield = false;
+            shieldIndicator.style.display = "none";
+        }, 3000);
+    }
+}
+for(var i = 0; i < purpleStars.length; i++){
+    if(isCollision(redBox, purpleStars[i])){
+        currentScore += Math.floor(Math.random()*(100-50+1)+50);
+        purpleStars[i].remove();
+        createBlueBox();
+    }
+}
+}
+
+function moveTowardsPlayer(blueBox){
+var xDiff = redBox.getBoundingClientRect().left - blueBox.getBoundingClientRect().left;
+var yDiff = redBox.getBoundingClientRect().top - blueBox.getBoundingClientRect().top;
+var speed = 0.1;
+blueBox.style.left = (blueBox.getBoundingClientRect().left + xDiff * speed) + "px";
+blueBox.style.top = (blueBox.getBoundingClientRect().top + yDiff * speed) + "px";
+}
+
+function reset(){
+    clearInterval(blueInterval);
+    clearInterval(yellowInterval);
+    clearInterval(purpleInterval);
+    clearInterval(scoreInterval);
+    clearInterval(collisionInterval);
+    var blueBoxes = document.querySelectorAll(".blue-box");
+    var yellowCircles = document.querySelectorAll(".yellow-circle");
+    var purpleStars = document.querySelectorAll(".purple-star");
+    for(var i = 0; i < blueBoxes.length; i++){
+        blueBoxes[i].remove();
+    }
+    for(var i = 0; i < yellowCircles.length; i++){
+        yellowCircles[i].remove();
+    }
+    for(var i = 0; i < purpleStars.length; i++){
+        purpleStars[i].remove();
+    }
+    shield = false;
+    shieldIndicator.style.display = "none";
+    if(currentScore > bestScore){
+        bestScore = currentScore;
+        localStorage.setItem("bestScore", bestScore);
+    }
+    currentScore = 0;
+    score.innerHTML = "Score: " + currentScore;
+	document.getElementById("death-indicator").style.display = "block";
+    blueInterval = setInterval(createBlueBox, 1000);
+    yellowInterval = setInterval(createYellowCircle, 10000);
+    purpleInterval = setInterval(createPurpleStar, 30000);
+    scoreInterval = setInterval(updateScore, 100);
+    collisionInterval = setInterval(detectCollision, 100);
+	setTimeout(function(){
+    document.getElementById("death-indicator").style.display = "none";
+}, 3000);
+}
+
+function isCollision(a, b) {
+    var aRect = a.getBoundingClientRect();
+    var bRect = b.getBoundingClientRect();
+    return !(
+        ((aRect.top + aRect.height) < (bRect.top)) ||
+        (aRect.top > (bRect.top + bRect.height)) ||
+        ((aRect.left + aRect.width) < bRect.left) ||
+        (aRect.left > (bRect.left + bRect.width))
+    );
+}
+
+</script>
+
+</body>
+</html>
+
+
